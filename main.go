@@ -10,7 +10,7 @@ import (
 	dynamicstruct "github.com/ompluscator/dynamic-struct"
 )
 
-var fields = []string{"Id", "FirstName", "Age", "Roles.Id", "Roles.Images.Url", "Roles.Images.ImageGroups.Id", "Image.Url", "Birthday"}
+var fields = []string{"Id", "FirstName", "Age", "Roles.Id", "Roles.Images.Url", "Roles.Images.ImageGroups.Id", "Roles.undefined.Field", "Roles.Null", "Image.Url", "Birthday", "NaN"}
 
 var user = []User{
 	{
@@ -112,10 +112,14 @@ func fieldPreprocessing(fields []string) map[string]interface{} {
 	nextFields := map[string][]string{}
 
 	for _, field := range fields {
-		if !strings.Contains(field, ".") {
-			res[field] = true
+		if len(field) < 1 {
+			continue
+		}
+		validFieldName := strings.Title(field)
+		if !strings.Contains(validFieldName, ".") {
+			res[validFieldName] = true
 		} else {
-			arr := strings.Split(field, ".")
+			arr := strings.Split(validFieldName, ".")
 			nextFields[arr[0]] = append(nextFields[arr[0]], strings.Join(arr[1:], "."))
 		}
 	}
@@ -132,9 +136,9 @@ func buildStruct(structMap map[string]interface{}, data interface{}) interface{}
 	builder := dynamicstruct.NewStruct()
 	for k, v := range structMap {
 		if nextMap, isOk := v.(map[string]interface{}); isOk {
-			builder.AddField(k, buildStruct(nextMap, getDataFromStructByFieldName(data, k)), "")
+			builder.AddField(k, buildStruct(nextMap, getDataFromStructByFieldName(data, k)), ``)
 		} else {
-			builder.AddField(k, i, "")
+			builder.AddField(k, i, ``)
 		}
 	}
 	if isArr {
@@ -145,18 +149,30 @@ func buildStruct(structMap map[string]interface{}, data interface{}) interface{}
 
 //Получаем вложенные данные из структуры
 func getDataFromStructByFieldName(data interface{}, field string) interface{} {
-	r := reflect.ValueOf(data)
+	var i *interface{}
+
+	r := reflect.Indirect(reflect.ValueOf(data))
 	if r.Kind() == reflect.Slice {
-		r := reflect.TypeOf(data)
-		el := reflect.New(r.Elem())
-		return reflect.Indirect(el).FieldByName(field).Interface()
+		el := reflect.Indirect(reflect.New(r.Type().Elem()))
+		f := el.FieldByName(field)
+		if !f.IsValid() {
+			return i
+		}
+		return reflect.New(f.Type()).Interface()
 	} else {
-		return reflect.Indirect(r).FieldByName(field).Interface()
+		if !r.IsValid() || r.IsZero() || r.IsNil() {
+			return i
+		}
+		f := reflect.Indirect(r).FieldByName(field)
+		if f.IsNil() || f.IsZero() || !f.IsValid() {
+			return i
+		}
+		return f.Interface()
 	}
 }
 
 func isArray(data interface{}) (res bool) {
-	rt := reflect.TypeOf(data)
+	rt := reflect.Indirect(reflect.ValueOf(data))
 	switch rt.Kind() {
 	case reflect.Slice:
 		res = true

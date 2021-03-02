@@ -83,6 +83,76 @@ var user = []User{
 		},
 		Birthday: time.Now(),
 	},
+	{
+		Id:        2,
+		FirstName: "John 2",
+		LastName:  "Doe3",
+		Age:       24,
+		Password:  "123456",
+		Roles: []Role{
+			{
+				Id:   1,
+				Name: "User",
+				Images: []Image{
+					{
+						Id:   4,
+						Url:  "img4",
+						Size: 44,
+						ImageGroups: []ImageGroup{
+							{
+								Id:   1,
+								Name: "Type 1",
+							},
+							{
+								Id:   2,
+								Name: "Type 2",
+							},
+						},
+					},
+					{
+						Id:   5,
+						Url:  "img5",
+						Size: 55,
+						ImageGroups: []ImageGroup{
+							{
+								Id:   3,
+								Name: "Type 3",
+							},
+							{
+								Id:   4,
+								Name: "Type 4",
+							},
+						},
+					},
+					{
+						Id:   6,
+						Url:  "img6",
+						Size: 66,
+						ImageGroups: []ImageGroup{
+							{
+								Id:   2,
+								Name: "Type 1",
+							},
+							{
+								Id:   3,
+								Name: "Type 2",
+							},
+						},
+					},
+				},
+			},
+			{
+				Id:   2,
+				Name: "Admin",
+			},
+		},
+		Image: Image{
+			Id:   14,
+			Url:  "img14",
+			Size: 123,
+		},
+		Birthday: time.Now(),
+	},
 }
 
 func main() {
@@ -90,7 +160,7 @@ func main() {
 
 	resMap := fieldPreprocessing(fields)
 
-	resStruct := buildStruct(resMap, user)
+	resStruct := buildStruct(resMap, &user)
 
 	err := json.Unmarshal(b, &resStruct)
 	if err != nil {
@@ -160,11 +230,11 @@ func getDataFromStructByFieldName(data interface{}, field string) interface{} {
 		}
 		return reflect.New(f.Type()).Interface()
 	} else {
-		if !r.IsValid() || r.IsZero() || r.IsNil() {
+		if !r.IsValid() || r.IsZero() || !(r.Kind() == reflect.Struct) && r.IsNil() {
 			return i
 		}
 		f := reflect.Indirect(r).FieldByName(field)
-		if f.IsNil() || f.IsZero() || !f.IsValid() {
+		if !(r.Kind() == reflect.Struct) && f.IsNil() || f.IsZero() || !f.IsValid() {
 			return i
 		}
 		return f.Interface()
